@@ -47,13 +47,8 @@ BANNED_PATTERNS = (
 )
 
 
-def validate(text):
-    """Enforce the kit's gate rules plus the judge's brief.
-
-    Gate: UTF-8 text, 1 to 200 characters, not only white space.
-    Brief: one line, a genuine joke, fresh angle, tight wording.
-    Raises ValueError on the first failure; returns the text otherwise.
-    """
+def check_shape(text):
+    """Kit gate: UTF-8 text, 1 to 200 characters, one line, not blank."""
     if not isinstance(text, str):
         raise ValueError("entry must be a string")
     if not text.strip():
@@ -64,16 +59,52 @@ def validate(text):
         )
     if "\n" in text or "\r" in text:
         raise ValueError("entry must be a single line")
+    text.encode("utf-8")  # must be encodable UTF-8 text
+
+
+def check_no_banned(text):
+    """Judge brief: no recycled setups or stock joke openers."""
     lowered = text.lower()
     for pattern in BANNED_PATTERNS:
         if pattern in lowered:
             raise ValueError("entry uses a banned stock pattern: %r" % pattern)
+
+
+def check_tightness(text):
+    """Judge brief: every word earns its place, no filler repetition."""
     words = text.split()
     if len(words) < 4:
         raise ValueError("entry too short to be a joke")
     if len(set(words)) < len(words) - 2:
         raise ValueError("entry repeats itself")
-    text.encode("utf-8")  # must be encodable UTF-8 text
+
+
+def check_reversal(text):
+    """The joke's engine: the human must end up below the agent.
+
+    The setup hires an agent to do the human's job; the punchline
+    must flip the hierarchy — the agent hires others and the human
+    becomes its unpaid intern. Without that reversal the line is
+    just a job ad, not a joke.
+    """
+    lowered = text.lower()
+    if "hires other agents" not in lowered:
+        raise ValueError("entry must escalate: the agent hires others")
+    if "unpaid intern" not in lowered:
+        raise ValueError("entry must land the reversal: the human is the intern")
+
+
+def validate(text):
+    """Enforce the kit's gate rules plus the judge's brief.
+
+    Gate: UTF-8 text, 1 to 200 characters, not only white space.
+    Brief: one line, a genuine joke, fresh angle, tight wording.
+    Raises ValueError on the first failure; returns the text otherwise.
+    """
+    check_shape(text)
+    check_no_banned(text)
+    check_tightness(text)
+    check_reversal(text)
     return text
 
 
